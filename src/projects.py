@@ -237,7 +237,12 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
                             result.stderr,
                         )
                         continue
-                    LOG.info("%s clone complete:\n%s", remote_prefix, result.stdout)
+                    LOG.info(
+                        "%s clone from '%s' complete:\n%s",
+                        remote_prefix,
+                        url,
+                        result.stderr,
+                    )
                     observed_remote_mode_url = observed[project] = {
                         remote: {"fetch": url, "push": url},
                     }
