@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Manage Git projects."""
+
 import argparse
 import json
 import logging
@@ -13,10 +15,10 @@ from typing import Dict, Iterator, List, NoReturn, Optional, Tuple, Union
 LOG = logging.getLogger(__name__)
 
 
-def logging_cli_parser():
+def logging_cli_parser() -> argparse.ArgumentParser:
     """Define logging CLI arguments and options."""
     parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         "-q",
@@ -37,7 +39,8 @@ def logging_cli_parser():
     return parser
 
 
-def cli_parser():
+def cli_parser() -> argparse.ArgumentParser:
+    """Define CLI arguments and options."""
     parser = logging_cli_parser()
     parser.add_argument(
         "--clone", help="clone missing projects", default=False, action="store_true",
@@ -59,7 +62,12 @@ def cli_parser():
     )
     parser.add_argument(
         "--spec-create-overwrite",
-        help="overwrite the project specification if it already exists (ignored without --spec-create)",
+        help=" ".join(
+            [
+                "overwrite the project specification if it already exists",
+                "(ignored without --spec-create)",
+            ],
+        ),
         default=False,
         action="store_true",
     )
@@ -85,7 +93,7 @@ def cli_parser():
     return parser
 
 
-def configure_logging(args):
+def configure_logging(args: argparse.Namespace) -> None:
     """Configure logging for command-line tools."""
     logging.getLogger().setLevel(logging.getLevelName(args.log_level.upper()))
     formatter = logging.Formatter("[%(levelname)s] %(message)s")
@@ -136,8 +144,7 @@ def _fetchable_remote_urls(
 
 
 def main(argv: Optional[List[str]] = None) -> NoReturn:
-
-    # Parse the command:
+    """Parse and execute commands."""
     if argv is None:
         argv = sys.argv[1:]
     parser = cli_parser()
@@ -197,7 +204,7 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
         if isinstance(observed_remote_mode_url, subprocess.CalledProcessError):
             LOG.error("%s %s", prefix, observed_remote_mode_url.stderr.strip())
             continue
-        assert not isinstance(expected_remote_mode_url, subprocess.CalledProcessError,)
+        assert not isinstance(expected_remote_mode_url, subprocess.CalledProcessError)
 
         if project not in expected:
             LOG.warning("%s unexpected project", prefix)
@@ -247,7 +254,7 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
 
             # Sync remotes:
             for remote in sorted(
-                set(expected_remote_mode_url).union(observed_remote_mode_url)
+                set(expected_remote_mode_url).union(observed_remote_mode_url),
             ):
                 remote_prefix = prefix + f" [{remote}]"
 
@@ -362,7 +369,7 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
                         project: remote_mode_url
                         for project, remote_mode_url in expected.items()
                         if not isinstance(
-                            remote_mode_url, subprocess.CalledProcessError
+                            remote_mode_url, subprocess.CalledProcessError,
                         )
                     },
                     spec_f,
@@ -379,5 +386,5 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
 if __name__ == "__main__":
     try:
         main()
-    except KeyboardInterrupt as exc:
+    except KeyboardInterrupt:
         sys.exit(1)
