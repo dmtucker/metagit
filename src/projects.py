@@ -47,7 +47,13 @@ def cli_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--fetch",
-        help="synchronize --all remotes (includes --tags and --prune)",
+        help="update --all remotes (includes --tags and --prune)",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "--set-urls",
+        help="overwrite remote URLs that do not match the spec",
         default=False,
         action="store_true",
     )
@@ -80,7 +86,7 @@ def cli_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--sync",
-        help="an alias for --clone and --fetch",
+        help="an alias for --clone, --fetch, and --set-urls",
         default=False,
         action="store_true",
     )
@@ -154,6 +160,7 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
     if args.sync:
         args.clone = True
         args.fetch = True
+        args.set_urls = True
 
     # Check for existing projects (observed),
     # and parse the specification (expected), if there is one:
@@ -275,16 +282,30 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
                     LOG.warning("%s unexpected remote", remote_prefix)
 
                 elif expected_mode_url != observed_mode_url:
-                    LOG.debug("%s sync needed", remote_prefix)
+                    LOG.debug("%s remote sync needed", remote_prefix)
 
                     if remote not in observed_remote_mode_url:
+                        if not args.set_urls:
+                            LOG.warning(
+                                "%s skipping (rerun with --set-urls)...", remote_prefix,
+                            )
+                            continue
                         LOG.info("%s adding...", remote_prefix)
-                        url = "TBD"  # TODO loop on fetchable remotes?
-                        subprocess.run(git + ["remote", "add", remote, url], check=True)
-                        observed_mode_url = observed_remote_mode_url[remote] = {
-                            "fetch": url,
-                            "push": url,
-                        }
+                        for url in expected_mode_url.values():
+                            subprocess.run(
+                                git + ["remote", "add", remote, url], check=True,
+                            )
+                            observed_mode_url = observed_remote_mode_url[remote] = {
+                                "fetch": url,
+                                "push": url,
+                            }
+                            break
+                        else:
+                            LOG.error(
+                                "%s unable to add remote from expected modes",
+                                remote_prefix,
+                            )
+                            continue
 
                     LOG.debug("%s remote exists", remote_prefix)
                     assert observed_mode_url is not None
@@ -305,6 +326,13 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
                             LOG.warning("%s unexpected mode", mode_remote_prefix)
 
                         elif expected_url != observed_url:
+                            LOG.debug("%s mode sync needed", mode_remote_prefix)
+                            if not args.set_urls:
+                                LOG.warning(
+                                    "%s skipping (rerun with --set-urls)...",
+                                    mode_remote_prefix,
+                                )
+                                continue
                             LOG.info(
                                 "%s changing '%s' to '%s'...",
                                 mode_remote_prefix,
