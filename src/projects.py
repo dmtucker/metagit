@@ -254,9 +254,6 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
                         remote: {"fetch": url, "push": url},
                     }
                     break
-                    # TODO delete the default branch?
-                    # subprocess.run(git + ["checkout", f"{fork}/master"], check=True)
-                    # subprocess.run(git + ["branch", "-d", "master"], check=True)
                 else:
                     LOG.error("%s unable to clone from expected remotes", prefix)
                     continue
