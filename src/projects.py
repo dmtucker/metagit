@@ -28,7 +28,9 @@ def logging_cli_parser() -> argparse.ArgumentParser:
         help="Supress console output.",
     )
     parser.add_argument(
-        "--log-file", type=str, help="Specify a path to log to.",
+        "--log-file",
+        type=str,
+        help="Specify a path to log to.",
     )
     parser.add_argument(
         "--log-level",
@@ -43,7 +45,10 @@ def cli_parser() -> argparse.ArgumentParser:
     """Define CLI arguments and options."""
     parser = logging_cli_parser()
     parser.add_argument(
-        "--clone", help="clone missing projects", default=False, action="store_true",
+        "--clone",
+        help="clone missing projects",
+        default=False,
+        action="store_true",
     )
     parser.add_argument(
         "--fetch",
@@ -58,13 +63,17 @@ def cli_parser() -> argparse.ArgumentParser:
         action="store_true",
     )
     parser.add_argument(
-        "--git-encoding", help="the encoding git will use", default="utf-8",
+        "--git-encoding",
+        help="the encoding git will use",
+        default="utf-8",
     )
     parser.add_argument(
-        "--spec", help="the path to a project specification",
+        "--spec",
+        help="the path to a project specification",
     )
     parser.add_argument(
-        "--spec-create", help="write the project specification based on what exists",
+        "--spec-create",
+        help="write the project specification based on what exists",
     )
     parser.add_argument(
         "--spec-create-overwrite",
@@ -76,6 +85,18 @@ def cli_parser() -> argparse.ArgumentParser:
         ),
         default=False,
         action="store_true",
+    )
+    parser.add_argument(
+        "--expect-remote",
+        help=" ".join(
+            [
+                "a remote (NAME and URL, where url may contain a {project}",
+                "placeholder which will be auto-filled with the project name)",
+                "to expect in each project that is matched by PATTERN",
+                "(overriding the spec, if it conflicts)",
+            ],
+        ),
+        nargs=2,
     )
     projects_path = os.environ.get("PROJECTS")
     parser.add_argument(
@@ -115,7 +136,8 @@ def configure_logging(args: argparse.Namespace) -> None:
 
 _REMOTE_MODE_URL_TYPE = Dict[str, Dict[str, str]]
 _REMOTE_MODE_URL_RETURN_TYPE = Union[
-    _REMOTE_MODE_URL_TYPE, subprocess.CalledProcessError,
+    _REMOTE_MODE_URL_TYPE,
+    subprocess.CalledProcessError,
 ]
 
 
@@ -167,7 +189,8 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
     try:
         observed = {
             project: _remote_mode_url(
-                os.path.join(args.projects, project), encoding=args.git_encoding,
+                os.path.join(args.projects, project),
+                encoding=args.git_encoding,
             )
             for project in os.listdir(args.projects)
         }
@@ -212,6 +235,14 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
             LOG.error("%s %s", prefix, observed_remote_mode_url.stderr.strip())
             continue
         assert not isinstance(expected_remote_mode_url, subprocess.CalledProcessError)
+
+        if args.expect_remote:
+            remote, url = args.expect_remote
+            url = url.format(project=project)
+            if expected_remote_mode_url is None:
+                # If the project is unexpected, expect it:
+                expected_remote_mode_url = expected[project] = {}
+            expected_remote_mode_url.update({remote: {"fetch": url, "push": url}})
 
         if project not in expected:
             LOG.warning("%s unexpected project", prefix)
@@ -284,13 +315,15 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
                     if remote not in observed_remote_mode_url:
                         if not args.set_urls:
                             LOG.warning(
-                                "%s skipping (rerun with --set-urls)...", remote_prefix,
+                                "%s skipping (rerun with --set-urls)...",
+                                remote_prefix,
                             )
                             continue
                         LOG.info("%s adding...", remote_prefix)
                         for url in expected_mode_url.values():
                             subprocess.run(
-                                git + ["remote", "add", remote, url], check=True,
+                                git + ["remote", "add", remote, url],
+                                check=True,
                             )
                             observed_mode_url = observed_remote_mode_url[remote] = {
                                 "fetch": url,
@@ -340,7 +373,8 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
                             if mode == "push":
                                 git_remote_set_url.append("--push")
                             subprocess.run(
-                                git_remote_set_url + [remote, expected_url], check=True,
+                                git_remote_set_url + [remote, expected_url],
+                                check=True,
                             )
                             observed_url = observed_mode_url[mode] = expected_url
 
@@ -368,7 +402,8 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
 
         LOG.debug("%s checking for stashed changes...", prefix)
         stdout = subprocess.check_output(
-            git + ["stash", "list"], encoding=args.git_encoding,
+            git + ["stash", "list"],
+            encoding=args.git_encoding,
         )
         if stdout:
             LOG.info("%s stashed changes:\n%s", prefix, stdout)
@@ -392,14 +427,16 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
         LOG.info("writing spec to '%s'...", args.spec_create)
         try:
             with open(
-                args.spec_create, mode="w" if args.spec_create_overwrite else "x",
+                args.spec_create,
+                mode="w" if args.spec_create_overwrite else "x",
             ) as spec_f:
                 json.dump(
                     {
                         project: remote_mode_url
                         for project, remote_mode_url in expected.items()
                         if not isinstance(
-                            remote_mode_url, subprocess.CalledProcessError,
+                            remote_mode_url,
+                            subprocess.CalledProcessError,
                         )
                     },
                     spec_f,
