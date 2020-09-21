@@ -77,6 +77,18 @@ def cli_parser() -> argparse.ArgumentParser:
         default=False,
         action="store_true",
     )
+    parser.add_argument(
+        "--expect-remote",
+        help=" ".join(
+            [
+                "a remote (NAME and URL, where url may contain a {project}",
+                "placeholder which will be auto-filled with the project name)",
+                "to expect in each project that is matched by PATTERN",
+                "(overriding the spec, if it conflicts)",
+            ],
+        ),
+        nargs=2,
+    )
     projects_path = os.environ.get("PROJECTS")
     parser.add_argument(
         "--projects",
@@ -212,6 +224,14 @@ def main(argv: Optional[List[str]] = None) -> NoReturn:
             LOG.error("%s %s", prefix, observed_remote_mode_url.stderr.strip())
             continue
         assert not isinstance(expected_remote_mode_url, subprocess.CalledProcessError)
+
+        if args.expect_remote:
+            remote, url = args.expect_remote
+            url = url.format(project=project)
+            if expected_remote_mode_url is None:
+                # If the project is unexpected, expect it:
+                expected_remote_mode_url = expected[project] = {}
+            expected_remote_mode_url.update({remote: {"fetch": url, "push": url}})
 
         if project not in expected:
             LOG.warning("%s unexpected project", prefix)
