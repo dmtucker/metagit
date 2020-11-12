@@ -16,7 +16,7 @@ import setuptools  # type: ignore
 def read(*parts):
     """Read a file in this repository."""
     here = os.path.abspath(os.path.dirname(__file__))
-    with codecs.open(os.path.join(here, *parts), 'r') as file_:
+    with codecs.open(os.path.join(here, *parts), "r") as file_:
         return file_.read()
 
 
