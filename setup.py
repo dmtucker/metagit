@@ -22,9 +22,9 @@ def read(*parts: str) -> str:
 
 if __name__ == "__main__":
     setuptools.setup(
-        name="projects",
+        name="metagit",
         use_scm_version=True,
-        url="https://github.com/dmtucker/projects",
+        url="https://github.com/dmtucker/metagit",
         description="A Git Project Manager",
         long_description=read("README.md"),
         long_description_content_type="text/markdown",
@@ -40,8 +40,13 @@ if __name__ == "__main__":
         include_package_data=True,
         setup_requires=["setuptools_scm >= 4.0"],
         python_requires=">= 3.6",
-        entry_points={"console_scripts": ["projects = projects:main"]},
-        keywords="notes backlog todo list",
+        install_requires=[
+            "attrs >= 20.3",
+            "click >= 7.1",
+            "gitpython >= 3.1",
+            "setuptools >= 49.6",
+        ],
+        entry_points={"console_scripts": ["metagit = metagit.__main__:main"]},
         classifiers=[
             "License :: OSI Approved :: "
             "GNU Lesser General Public License v2 or later (LGPLv2+)",
