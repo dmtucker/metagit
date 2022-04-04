@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Iterator, Set, Tuple, Type, TypeVar, Union
 
 import attr
-import git  # type: ignore
+import git
 from pkg_resources import get_distribution
 
 
@@ -95,14 +95,17 @@ class _GitRepo:
         path = getattr(self, self._git_path_attr) / relative_path
         blob.stream_data(path.open("wb"))
 
-    def _git_repo(self, *, init: bool = False) -> git.Repo:
+    # https://github.com/gitpython-developers/GitPython/issues/1349
+    def _git_repo(self, *, init: bool = False) -> git.Repo:  # type: ignore
         """Get a git.Repo."""
         path = getattr(self, self._git_path_attr)
         try:
             if init:
-                return git.Repo.init(path)
+                # https://github.com/gitpython-developers/GitPython/issues/1349
+                return git.Repo.init(path)  # type: ignore
             else:
-                return git.Repo(path, search_parent_directories=False)
+                # https://github.com/gitpython-developers/GitPython/issues/1349
+                return git.Repo(path, search_parent_directories=False)  # type: ignore
         except git.GitError as exc:
             raise self._git_repo_exc(path) from exc
 
@@ -308,7 +311,8 @@ class MetagitRepo(_GitRepo):
         except ValueError:
             return  # no commits == no tracked projects
         for blob_or_tree in commit.tree.traverse():
-            if isinstance(blob_or_tree, git.Blob):
+            # https://github.com/gitpython-developers/GitPython/issues/1349
+            if isinstance(blob_or_tree, git.Blob):  # type: ignore
                 yield MetagitProject(repo_path / blob_or_tree.path)
 
     def remove_project(self, path: Union[str, Path, MetagitProject]) -> None:

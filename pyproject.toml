@@ -1,3 +1,9 @@
 [build-system]
 requires = ['setuptools ~= 49.6', 'setuptools-scm ~= 4.0', 'wheel ~= 0.35.0']
 build-backend = 'setuptools.build_meta'
+
+# https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#pylint
+[tool.pylint.messages_control]
+disable = "C0330, C0326"
+[tool.pylint.format]
+max-line-length = "88"

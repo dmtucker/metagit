@@ -10,7 +10,7 @@ import codecs
 import glob
 import os
 
-import setuptools  # type: ignore
+import setuptools
 
 
 def read(*parts: str) -> str:
