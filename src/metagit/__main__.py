@@ -3,7 +3,7 @@
 
 import contextlib
 import os
-from typing import Iterator, Tuple, Type
+from typing import cast, Iterator, Tuple, Type, Union
 
 import click
 
@@ -100,17 +100,23 @@ def rm(ctx: click.Context, path: Tuple[str]) -> None:
 
 
 @main.command()
+@click.option(
+    "--all/--not-all",
+    "all_",
+    help="Restore all tracked projects.",
+    default=False,
+)
 @click.argument("path", nargs=-1, type=click.Path())
 @click.pass_context
-def restore(ctx: click.Context, path: Tuple[str]) -> None:
+def restore(ctx: click.Context, all_: bool, path: Tuple[str]) -> None:
     """Restore projects from the Metagit repository."""
     with ctx.obj["manager"]:
         repo = metagit.MetagitRepo.for_path(
             ctx.obj["path"],
             search_parent_directories=True,
         )
-        for p in path:
-            repo.restore_project(p)
+        for p in repo.projects() if all_ else path:
+            repo.restore_project(cast(Union[str, metagit.MetagitProject], p))
 
 
 @main.command()
