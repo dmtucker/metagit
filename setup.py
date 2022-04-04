@@ -23,7 +23,6 @@ def read(*parts: str) -> str:
 if __name__ == "__main__":
     setuptools.setup(
         name="metagit",
-        use_scm_version=True,
         url="https://github.com/dmtucker/metagit",
         description="A Git Project Manager",
         long_description=read("README.md"),
@@ -38,7 +37,6 @@ if __name__ == "__main__":
             for path in glob.glob("src/*.py")
         ],
         include_package_data=True,
-        setup_requires=["setuptools_scm >= 4.0"],
         python_requires=">= 3.6",
         install_requires=[
             "attrs >= 20.3",
