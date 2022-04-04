@@ -153,6 +153,22 @@ def test_restore(nonempty_repo):
         assert not nonempty_repo.diff_project(project)
 
 
+def test_restore_all(nonempty_repo):
+    """`metagit restore --all` restores all projects without specifying paths."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        project = non_metagit_dir_project(nonempty_repo)
+        rm_rf(project.path)
+        assert nonempty_repo.diff_project(project)
+        result = runner.invoke(
+            cli.main,
+            ["-C", nonempty_repo.path(), "restore", "--all"],
+        )
+        assert result.exit_code == 0
+        assert result.output == ""
+        assert not nonempty_repo.diff_project(project)
+
+
 def test_restore_relative(nonempty_repo):
     """`metagit restore` restores a project specified by relative path."""
     runner = CliRunner()
