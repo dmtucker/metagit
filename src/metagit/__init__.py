@@ -156,6 +156,20 @@ class MetagitProject(_GitRepo):
         git_repo = self._git_repo(init=True)
         (Path(git_repo.git_dir) / "config").write_bytes(config)
 
+    def set_remote(self, name: str, url: str) -> None:
+        """
+        Create or modify a remote in the project.
+
+        InvalidProjectError is raised if self.path does not refer to a valid project.
+        """
+        git_repo = self._git_repo(init=True)
+        try:
+            remote = git_repo.remote(name)
+        except ValueError:
+            remote = git_repo.create_remote(name, url)
+        if remote.url != url:
+            remote.set_url(url, old_url=remote.url)
+
 
 _MetagitRepo = TypeVar("_MetagitRepo", bound="MetagitRepo")
 
@@ -388,3 +402,17 @@ class MetagitRepo(_GitRepo):
             tree = []
         untracked = {path for path in repo_path.iterdir() if path.name not in tree}
         return deleted, modified, untracked
+
+    def sync_remotes(self) -> None:
+        """
+        Create remotes in each tracked project from remotes in the Metagit repository.
+
+        InvalidRepoError is raised if self.metagit_dir does not refer to a valid repo.
+        """
+        remotes = self._git_repo().remotes
+        for project in self.projects():
+            for remote in remotes:
+                project.set_remote(
+                    remote.name,
+                    project.path.name.join(remote.url.rsplit(self.METAGIT_DIR_NAME, 1)),
+                )

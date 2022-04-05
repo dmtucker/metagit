@@ -3,7 +3,7 @@
 
 from pathlib import Path
 import random
-from typing import Union
+from typing import Dict, Union
 import uuid
 
 import git
@@ -26,6 +26,11 @@ def non_metagit_dir_project(repo: metagit.MetagitRepo):
     if project.path.name == metagit.MetagitRepo.METAGIT_DIR_NAME:
         project = next(projects)
     return project
+
+
+def project_remotes(project: metagit.MetagitProject) -> Dict[str, str]:
+    """Get a dictionary of the remotes in a MetagitProject."""
+    return {remote.name: remote.url for remote in project._git_repo().remotes}
 
 
 def rm_rf(path: Union[str, Path]) -> None:

@@ -121,6 +121,18 @@ def restore(ctx: click.Context, all_: bool, path: Tuple[str]) -> None:
 
 @main.command()
 @click.pass_context
+def remote_sync(ctx: click.Context) -> None:
+    """Create project remotes corresponding to remotes in the Metagit repository."""
+    with ctx.obj["manager"]:
+        repo = metagit.MetagitRepo.for_path(
+            ctx.obj["path"],
+            search_parent_directories=True,
+        )
+        repo.sync_remotes()
+
+
+@main.command()
+@click.pass_context
 def status(ctx: click.Context) -> None:
     """Get information about a Metagit repository."""
     with ctx.obj["manager"]:

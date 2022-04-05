@@ -32,7 +32,8 @@ def empty_repo(request, tmp_path_factory):
 def nonempty_repo(tmp_path_factory):
     """Get a MetagitRepo that tracks at least one project (in addition to .metagit)."""
     repo = metagit.MetagitRepo.init(tmp_path_factory.mktemp("nonempty_projects"))
-    repo.add_project(git_repo_for_metagit_repo(repo).git_dir)
+    for _ in range(5):
+        repo.add_project(git_repo_for_metagit_repo(repo).git_dir)
     return repo
 
 
@@ -60,6 +61,25 @@ def project_type(request):
 def repo(request):
     """Get a MetagitRepo."""
     return request.param
+
+
+@pytest.fixture(
+    params=[
+        "user@domain.tld:SomeName/{0}",
+        "git@github.com:SomeName/{0}.git",
+        "https://user.metagit.custom/SomeName/{0}",
+        "https://gitlab.com/SomeName/{0}.git",
+    ],
+)
+def repo_with_remote(repo, request):
+    """Get a MetagitRepo which has had a remote added."""
+    name = "SomeRemoteName"
+    repo._git_repo().create_remote(name, request.param.format(repo.METAGIT_DIR_NAME))
+    for project in repo.projects():
+        if project.path.name != repo.METAGIT_DIR_NAME:
+            project.set_remote(name, "existing@remote:url")
+            break
+    return repo, (name, request.param)
 
 
 @pytest.fixture(params=[True, False])
