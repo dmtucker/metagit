@@ -11,7 +11,12 @@ from click.testing import CliRunner
 from metagit import __version__, MetagitError, MetagitProject, MetagitRepo
 from metagit import __main__ as cli
 
-from util import git_repo_for_metagit_repo, non_metagit_dir_project, rm_rf
+from util import (
+    git_repo_for_metagit_repo,
+    non_metagit_dir_project,
+    project_remotes,
+    rm_rf,
+)
 
 
 # @click.command changes function parameters at runtime:
@@ -135,6 +140,28 @@ def test_rm_relative(nonempty_repo):
             assert result.exit_code == 0
             assert result.output == ""
         assert project not in nonempty_repo.projects()
+
+
+def test_remote_sync(repo_with_remote):
+    """`metagit remote-sync` translates .metagit remotes to each tracked project."""
+    repo, (name, url_template) = repo_with_remote
+
+    for project in repo.projects():
+        if project.path.name != repo.METAGIT_DIR_NAME:
+            project_url = url_template.format(project.path.name)
+            assert project_remotes(project).get(name) != project_url
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(
+            cli.main,
+            ["-C", repo.path(), "remote-sync"],
+        )
+        assert result.exit_code == 0
+        assert result.output == ""
+        for project in repo.projects():
+            project_url = url_template.format(project.path.name)
+            assert project_remotes(project).get(name) == project_url
 
 
 def test_restore(nonempty_repo):

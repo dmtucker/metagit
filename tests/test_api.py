@@ -9,7 +9,12 @@ import pytest
 
 import metagit as api
 
-from util import git_repo_for_metagit_repo, non_metagit_dir_project, rm_rf
+from util import (
+    git_repo_for_metagit_repo,
+    non_metagit_dir_project,
+    project_remotes,
+    rm_rf,
+)
 
 
 def test_error_invalid_project(tmp_path):
@@ -538,3 +543,19 @@ def test_repo_status_untracked(empty_repo):
     assert not modified
     assert empty_repo.metagit_dir in untracked
     assert len(untracked) == 1
+
+
+def test_repo_sync_remotes(repo_with_remote):
+    """MetagitRepo.sync_remotes modifies project remotes based on .metagit remotes."""
+    repo, (name, url_template) = repo_with_remote
+
+    for project in repo.projects():
+        if project.path.name != repo.METAGIT_DIR_NAME:
+            project_url = url_template.format(project.path.name)
+            assert project_remotes(project).get(name) != project_url
+
+    repo.sync_remotes()
+
+    for project in repo.projects():
+        project_url = url_template.format(project.path.name)
+        assert project_remotes(project).get(name) == project_url
