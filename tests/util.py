@@ -19,7 +19,7 @@ def git_repo_for_metagit_repo(repo: metagit.MetagitRepo) -> git.Repo:
     return git.Repo.init(project_path)
 
 
-def non_metagit_dir_project(repo: metagit.MetagitRepo):
+def non_metagit_dir_project(repo: metagit.MetagitRepo) -> metagit.MetagitProject:
     """Get a MetagitProject that can be deleted."""
     projects = repo.projects()
     project = next(projects)
