@@ -164,6 +164,34 @@ def test_remote_sync(repo_with_remote):
             assert project_remotes(project).get(name) == project_url
 
 
+def test_remote_sync_project(repo_with_remote):
+    """`metagit remote-sync` translates .metagit remotes to a tracked project."""
+    repo, (name, url_template) = repo_with_remote
+
+    project = None
+    for project in repo.projects():
+        if project.path.name != repo.METAGIT_DIR_NAME:
+            project_url = url_template.format(project.path.name)
+            assert project_remotes(project).get(name) != project_url
+    _project = project
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(
+            cli.main,
+            ["-C", repo.path(), "remote-sync"]
+            + ([] if _project is None else [str(_project.path)]),
+        )
+        assert result.exit_code == 0
+        assert result.output == ""
+        for project in repo.projects():
+            project_url = url_template.format(project.path.name)
+            if project == _project or project.path.name == repo.METAGIT_DIR_NAME:
+                assert project_remotes(project).get(name) == project_url
+            else:
+                assert project_remotes(project).get(name) != project_url
+
+
 def test_restore(nonempty_repo):
     """`metagit restore` overwrites un-added changes to a project."""
     runner = CliRunner()

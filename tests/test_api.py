@@ -559,3 +559,38 @@ def test_repo_sync_remotes(repo_with_remote):
     for project in repo.projects():
         project_url = url_template.format(project.path.name)
         assert project_remotes(project).get(name) == project_url
+
+
+def test_repo_sync_remotes_project(repo_with_remote):
+    """MetagitRepo.sync_remotes modifies project remotes based on .metagit remotes."""
+    repo, (name, url_template) = repo_with_remote
+
+    project = None
+    for project in repo.projects():
+        if project.path.name != repo.METAGIT_DIR_NAME:
+            project_url = url_template.format(project.path.name)
+            assert project_remotes(project).get(name) != project_url
+
+    _project = project
+    repo.sync_remotes(_project)
+
+    for project in repo.projects():
+        project_url = url_template.format(project.path.name)
+        if project == _project or project.path.name == repo.METAGIT_DIR_NAME:
+            assert project_remotes(project).get(name) == project_url
+        else:
+            assert project_remotes(project).get(name) != project_url
+
+
+def test_repo_sync_remotes_nonexistent(repo, project_type):
+    """MetagitRepo.sync_remotes raises an exception for a nonexistent project."""
+    path = repo.path() / "nonexistent"
+    with pytest.raises(api.InvalidProjectError, match=str(path)):
+        repo.sync_remotes(project_type(path))
+
+
+def test_repo_sync_remotes_untracked(repo, tmp_path, project_type):
+    """MetagitRepo.sync_remotes raises an exception for an untracked project."""
+    git_repo = git_repo_for_metagit_repo(repo)
+    with pytest.raises(api.UntrackedProjectError, match=git_repo.git_dir):
+        repo.sync_remotes(project_type(git_repo.git_dir))
