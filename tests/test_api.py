@@ -456,11 +456,35 @@ def test_repo_status(nonempty_repo):
     assert not any(nonempty_repo.status())
 
 
+def test_repo_status_ignore(nonempty_repo, project_type):
+    """MetagitRepo.status ignores non-existent untracked paths."""
+    assert not any(
+        nonempty_repo.status(project_type(nonempty_repo.path() / "nonexistent")),
+    )
+
+
+def test_repo_status_not_in_repo(nonempty_repo, project_type):
+    """MetagitRepo.status raises NotInRepoError for paths outside the repo."""
+    with pytest.raises(api.NotInRepoError):
+        nonempty_repo.status(project_type(nonempty_repo.path() / ".." / "nonexistent"))
+
+
 def test_repo_status_deleted(nonempty_repo):
     """MetagitRepo.status discovers deleted projects."""
     project = non_metagit_dir_project(nonempty_repo)
     rm_rf(project.path)
     deleted, modified, untracked = nonempty_repo.status()
+    assert project in deleted
+    assert len(deleted) == 1
+    assert not modified
+    assert not untracked
+
+
+def test_repo_status_deleted_path(nonempty_repo, project_type):
+    """MetagitRepo.status discovers deleted projects specified by path."""
+    project = non_metagit_dir_project(nonempty_repo)
+    rm_rf(project.path)
+    deleted, modified, untracked = nonempty_repo.status(project_type(project.path))
     assert project in deleted
     assert len(deleted) == 1
     assert not modified
@@ -514,6 +538,17 @@ def test_repo_status_modified(nonempty_repo):
     assert not untracked
 
 
+def test_repo_status_modified_path(nonempty_repo, project_type):
+    """MetagitRepo.status discovers projects that have been modified by path."""
+    project = next(nonempty_repo.projects())
+    git.Repo(project.path).create_remote("test_repo_status_modified", "a@b.c:d")
+    deleted, modified, untracked = nonempty_repo.status(project_type(project.path))
+    assert not deleted
+    assert project in modified
+    assert len(modified) == 1
+    assert not untracked
+
+
 def test_repo_status_modified_no_config(nonempty_repo):
     """MetagitRepo.status discovers projects that have no config file."""
     project = next(nonempty_repo.projects())
@@ -539,6 +574,17 @@ def test_repo_status_no_commits(empty_repo):
 def test_repo_status_untracked(empty_repo):
     """MetagitRepo.status discovers untracked paths in the repo."""
     deleted, modified, untracked = empty_repo.status()
+    assert not deleted
+    assert not modified
+    assert empty_repo.metagit_dir in untracked
+    assert len(untracked) == 1
+
+
+def test_repo_status_untracked_path(empty_repo, project_type):
+    """MetagitRepo.status discovers untracked paths in the repo by path."""
+    deleted, modified, untracked = empty_repo.status(
+        project_type(empty_repo.metagit_dir),
+    )
     assert not deleted
     assert not modified
     assert empty_repo.metagit_dir in untracked
