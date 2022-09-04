@@ -129,8 +129,7 @@ def remote_sync(ctx: click.Context, path: Tuple[str, ...]) -> None:
             ctx.obj["path"],
             search_parent_directories=True,
         )
-        for p in path or [None]:
-            repo.sync_remotes(p)
+        repo.sync_remotes(*path)
 
 
 @main.command()

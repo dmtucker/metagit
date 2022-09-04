@@ -449,10 +449,7 @@ class MetagitRepo(_GitRepo):
 
         return deleted, modified, untracked
 
-    def sync_remotes(
-        self,
-        project: Union[str, Path, MetagitProject, None] = None,
-    ) -> None:
+    def sync_remotes(self, *projects: Union[str, Path, MetagitProject]) -> None:
         """
         Create remotes in a/each tracked project from remotes in the Metagit repository.
 
@@ -460,19 +457,25 @@ class MetagitRepo(_GitRepo):
         UntrackedProjectError is raised if a passed project is not being tracked.
         InvalidRepoError is raised if self.metagit_dir does not refer to a valid repo.
         """
-        projects = self.projects()
-        if project is not None:
+
+        def validated_project(
+            project: Union[str, Path, MetagitProject],
+        ) -> MetagitProject:
             # The project must be valid:
             _project = MetagitProject.for_path(
                 project.path if isinstance(project, MetagitProject) else project,
             )
             # The project must be tracked:
-            if _project not in projects:
+            if _project not in self.projects():
                 raise UntrackedProjectError(project)
-            projects = iter([_project])
-        # Sync remotes:
+            return _project
+
         remotes = self._git_repo().remotes
-        for project in projects:
+        for project in [
+            validated_project(project)
+            for project in projects
+            if project is not None  # for backwards-compatibility
+        ] or self.projects():
             for remote in remotes:
                 project.set_remote(
                     remote.name,
