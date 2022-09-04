@@ -377,36 +377,79 @@ class MetagitRepo(_GitRepo):
         project.set_config((self.metagit_dir / relative_path).read_bytes())
         return project
 
-    def status(self) -> Tuple[Set[MetagitProject], Set[MetagitProject], Set[Path]]:
+    def status(
+        self,
+        *paths: Union[str, Path, MetagitProject],
+    ) -> Tuple[Set[MetagitProject], Set[MetagitProject], Set[Path]]:
         """
         Get deleted and modifed projects and untracked files, respectively.
 
+        NotInRepoError is raised if a path is not in the repo.
         InvalidRepoError is raised if self.metagit_dir does not refer to a valid repo.
 
         OSError is raised if project config cannot be read in .metagit.
         """
         repo_path = self.path()
         git_repo = self._git_repo()
+        try:
+            tree = git_repo.head.commit.tree
+        except ValueError:
+            tree = {}
+        untracked = set()
+        projects = set()
+
+        for path in paths or [repo_path]:
+            # The path must be in the repo:
+            relative_path = self._repo_relative_path(
+                path.path if isinstance(path, MetagitProject) else Path(path),
+            )
+            path = repo_path / relative_path
+
+            projects_in_path = set()
+            for project in self.projects():
+                try:
+                    path.relative_to(project.path)
+                except ValueError:
+                    pass
+                else:
+                    # path is (under) project.
+                    projects.add(project)
+                    # Projects can't be nested, so stop looking:
+                    break
+                try:
+                    project.path.relative_to(path)
+                except ValueError:
+                    pass
+                else:
+                    # project is under path.
+                    projects_in_path.add(project)
+            else:
+                if projects_in_path or path == repo_path:
+                    projects.update(projects_in_path)
+                    for subpath in path.iterdir():
+                        if (
+                            subpath.name not in tree
+                            if path == repo_path
+                            else tree[str(relative_path)]
+                        ):
+                            untracked.add(path / subpath)
+                elif path.exists():
+                    untracked.add(path)
+                # If it doesn't exist, ignore it.
 
         deleted, modified = set(), set()
-        for project in self.projects():
+        for project in projects:
             self._sync_project(project)
             path = self.metagit_dir / project.path.relative_to(repo_path)
             if not path.exists():
                 deleted.add(project)
             elif git_repo.is_dirty(path=path):
                 modified.add(project)
-        try:
-            tree = git_repo.head.commit.tree
-        except ValueError:
-            tree = []
-        untracked = {path for path in repo_path.iterdir() if path.name not in tree}
+            # The project is clean.
+
         return deleted, modified, untracked
 
-    def sync_remotes(
-        self,
-        project: Union[str, Path, MetagitProject, None] = None,
-    ) -> None:
+    def sync_remotes(self, *projects: Union[str, Path, MetagitProject]) -> None:
         """
         Create remotes in a/each tracked project from remotes in the Metagit repository.
 
@@ -414,19 +457,25 @@ class MetagitRepo(_GitRepo):
         UntrackedProjectError is raised if a passed project is not being tracked.
         InvalidRepoError is raised if self.metagit_dir does not refer to a valid repo.
         """
-        projects = self.projects()
-        if project is not None:
+
+        def validated_project(
+            project: Union[str, Path, MetagitProject],
+        ) -> MetagitProject:
             # The project must be valid:
             _project = MetagitProject.for_path(
                 project.path if isinstance(project, MetagitProject) else project,
             )
             # The project must be tracked:
-            if _project not in projects:
+            if _project not in self.projects():
                 raise UntrackedProjectError(project)
-            projects = iter([_project])
-        # Sync remotes:
+            return _project
+
         remotes = self._git_repo().remotes
-        for project in projects:
+        for project in [
+            validated_project(project)
+            for project in projects
+            if project is not None  # for backwards-compatibility
+        ] or self.projects():
             for remote in remotes:
                 project.set_remote(
                     remote.name,

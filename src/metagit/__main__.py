@@ -129,21 +129,21 @@ def remote_sync(ctx: click.Context, path: Tuple[str, ...]) -> None:
             ctx.obj["path"],
             search_parent_directories=True,
         )
-        for p in path or [None]:
-            repo.sync_remotes(p)
+        repo.sync_remotes(*path)
 
 
 @main.command()
+@click.argument("path", nargs=-1, type=click.Path())
 @click.pass_context
-def status(ctx: click.Context) -> None:
-    """Get information about a Metagit repository."""
+def status(ctx: click.Context, path: Tuple[str, ...]) -> None:
+    """Get information about projects in a Metagit repository."""
     with ctx.obj["manager"]:
         repo = metagit.MetagitRepo.for_path(
             ctx.obj["path"],
             search_parent_directories=True,
         )
         projects = repo.projects()
-        deleted, modified, untracked = repo.status()
+        deleted, modified, untracked = repo.status(*path)
     if deleted or modified:
         click.echo("Changes")
         click.echo('  (use "metagit add/rm <project>..." to accept changes)')
@@ -159,9 +159,9 @@ def status(ctx: click.Context) -> None:
     if untracked:
         click.echo("Untracked projects")
         click.echo('  (use "metagit add <project>..." to begin tracking)')
-        for path in sorted(untracked):
-            suffix = "/" if path.is_dir() else ""
-            relpath = os.path.relpath(path, start=ctx.obj["path"])
+        for untracked_path in sorted(untracked):
+            suffix = "/" if untracked_path.is_dir() else ""
+            relpath = os.path.relpath(untracked_path, start=ctx.obj["path"])
             click.secho(f"\t{relpath}{suffix}", fg="red")
         click.echo()
 
